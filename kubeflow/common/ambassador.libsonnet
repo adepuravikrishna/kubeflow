@@ -2,7 +2,10 @@
   local k = import "k.libsonnet",
   local util = import "kubeflow/common/util.libsonnet",
   new(_env, _params):: {
-    local params = _params + _env,
+    local params = _params + _env {
+      injectIstio: util.toBool(_params.injectIstio),
+    },
+    local namespace = if params.injectIstio then params.istioNamespace else params.namespace,
 
     local ambassadorService = {
       apiVersion: "v1",
@@ -12,7 +15,7 @@
           service: "ambassador",
         },
         name: "ambassador",
-        namespace: params.namespace,
+        namespace: namespace,
       },
       spec: {
         ports: [
@@ -42,7 +45,7 @@
           service: "ambassador-admin",
         },
         name: "ambassador-admin",
-        namespace: params.namespace,
+        namespace: namespace,
       },
       spec: {
         ports: [
@@ -118,7 +121,7 @@
       kind: "ServiceAccount",
       metadata: {
         name: "ambassador",
-        namespace: params.namespace,
+        namespace: namespace,
       },
     },  // serviceAccount
     ambassadorServiceAccount:: ambassadorServiceAccount,
@@ -138,18 +141,18 @@
         {
           kind: "ServiceAccount",
           name: "ambassador",
-          namespace: params.namespace,
+          namespace: namespace,
         },
       ],
     },  // roleBinding
     ambassadorRoleBinding:: ambassadorRoleBinding,
 
     local ambassadorDeployment = {
-      apiVersion: "extensions/v1beta1",
+      apiVersion: "apps/v1beta1",
       kind: "Deployment",
       metadata: {
         name: "ambassador",
-        namespace: params.namespace,
+        namespace: namespace,
       },
       spec: {
         replicas: params.replicas,
@@ -158,7 +161,7 @@
             labels: {
               service: "ambassador",
             },
-            namespace: params.namespace,
+            namespace: namespace,
           },
           spec: {
             containers: [
@@ -174,23 +177,7 @@
                   },
                 ],
                 image: params.ambassadorImage,
-                livenessProbe: {
-                  httpGet: {
-                    path: "/ambassador/v0/check_alive",
-                    port: 8877,
-                  },
-                  initialDelaySeconds: 30,
-                  periodSeconds: 30,
-                },
                 name: "ambassador",
-                readinessProbe: {
-                  httpGet: {
-                    path: "/ambassador/v0/check_ready",
-                    port: 8877,
-                  },
-                  initialDelaySeconds: 30,
-                  periodSeconds: 30,
-                },
                 resources: {
                   limits: {
                     cpu: 1,
@@ -200,6 +187,22 @@
                     cpu: "200m",
                     memory: "100Mi",
                   },
+                },
+                readinessProbe: {
+                  httpGet: {
+                    path: "/ambassador/v0/check_ready",
+                    port: 8877,
+                  },
+                  initialDelaySeconds: 30,
+                  periodSeconds: 30,
+                },
+                livenessProbe: {
+                  httpGet: {
+                    path: "/ambassador/v0/check_alive",
+                    port: 8877,
+                  },
+                  initialDelaySeconds: 30,
+                  periodSeconds: 30,
                 },
               },
             ],

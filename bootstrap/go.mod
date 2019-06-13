@@ -10,6 +10,8 @@ require (
 	github.com/Masterminds/semver v1.4.2 // indirect
 	github.com/Masterminds/sprig v2.18.0+incompatible // indirect
 	github.com/NYTimes/gziphandler v1.0.1 // indirect
+	github.com/alecthomas/template v0.0.0-20160405071501-a0175ee3bccc // indirect
+	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/cenkalti/backoff v2.1.1+incompatible
 	github.com/coreos/etcd v3.3.11+incompatible // indirect
@@ -26,6 +28,7 @@ require (
 	github.com/fatih/camelcase v1.0.0 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-kit/kit v0.8.0
+	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-openapi/jsonpointer v0.18.0
 	github.com/go-openapi/jsonreference v0.18.0
 	github.com/go-openapi/spec v0.18.0 // indirect
@@ -34,13 +37,11 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.2.0 // indirect
 	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
-	github.com/golang/groupcache v0.0.0-20181024230925-c65c006176ff // indirect
 	github.com/google/go-github v17.0.0+incompatible // indirect
 	github.com/google/go-jsonnet v0.12.1 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/gophercloud/gophercloud v0.0.0-20190116032514-258a61a0642d // indirect
-	github.com/gregjones/httpcache v0.0.0-20181110185634-c63ab54fda8f // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 // indirect
 	github.com/hashicorp/go-getter v1.0.2
 	github.com/hashicorp/golang-lru v0.5.0 // indirect
@@ -48,6 +49,7 @@ require (
 	github.com/huandu/xstrings v1.2.0 // indirect
 	github.com/imdario/mergo v0.3.6
 	github.com/jonboulle/clockwork v0.1.0 // indirect
+	github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024 // indirect
 	github.com/ksonnet/ksonnet v0.13.1
 	github.com/ksonnet/ksonnet-lib v0.1.12 // indirect
 	github.com/mitchellh/go-homedir v1.0.0
@@ -55,8 +57,8 @@ require (
 	github.com/onrik/logrus v0.2.1
 	github.com/onsi/gomega v1.4.3
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
 	github.com/prometheus/client_golang v0.9.2
+	github.com/prometheus/common v0.0.0-20181126121408-4724e9255275
 	github.com/russross/blackfriday v0.0.0-00010101000000-000000000000 // indirect
 	github.com/shazow/go-diff v0.0.0-20160112020656-b6b7b6733b8c // indirect
 	github.com/sirupsen/logrus v1.3.0
@@ -66,11 +68,11 @@ require (
 	github.com/spf13/viper v1.3.1
 	go.opencensus.io v0.18.1-0.20181204023538-aab39bd6a98b // indirect
 	golang.org/x/crypto v0.0.0
-	golang.org/x/net v0.0.0-20190110200230-915654e7eabc
-	golang.org/x/oauth2 v0.0.0-20190115181402-5dab4167f31c
-	golang.org/x/time v0.0.0-20181108054448-85acf8d2951c // indirect
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a
+	golang.org/x/oauth2 v0.0.0-20190402181905-9f3314589c9a
 	google.golang.org/api v0.1.0
 	google.golang.org/genproto v0.0.0-20190111180523-db91494dd46c
+	gopkg.in/alecthomas/kingpin.v2 v2.2.6 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/resty.v1 v1.11.0
 	gopkg.in/square/go-jose.v2 v2.3.0 // indirect
@@ -86,8 +88,8 @@ require (
 	k8s.io/helm v2.13.0+incompatible // indirect
 	k8s.io/kube-openapi v0.0.0-20190115222348-ced9eb3070a5 // indirect
 	k8s.io/kubernetes v0.0.0-00010101000000-000000000000 // indirect
-	k8s.io/utils v0.0.0-20190308190857-21c4ce38f2a7 // indirect
-	sigs.k8s.io/controller-runtime v0.1.1
+	sigs.k8s.io/application/v2 v2.0.0
+	sigs.k8s.io/controller-runtime v0.0.0-00010101000000-000000000000
 	sigs.k8s.io/controller-runtime/v2 v2.0.0
 	sigs.k8s.io/kustomize/v2 v2.0.0-00010101000000-000000000000
 	vbom.ml/util v0.0.0-20180919145318-efcd4e0f9787 // indirect
@@ -99,22 +101,24 @@ replace (
 	github.com/go-openapi/jsonreference => github.com/go-openapi/jsonreference v0.17.0
 	github.com/go-openapi/spec => github.com/go-openapi/spec v0.18.0
 	github.com/go-openapi/swag => github.com/go-openapi/swag v0.17.0
+	github.com/kubeflow/kubeflow/bootstrap v0.0.0 => ./
 	github.com/mitchellh/go-homedir => github.com/mitchellh/go-homedir v1.0.0
 	github.com/russross/blackfriday => github.com/russross/blackfriday v1.5.2-0.20180428102519-11635eb403ff // indirect
 	golang.org/x/crypto => golang.org/x/crypto v0.0.0-20181203042331-505ab145d0a9
 	golang.org/x/net => golang.org/x/net v0.0.0-20180124060956-0ed95abb35c4
 	k8s.io/api => k8s.io/api v0.0.0-20180601181742-8b7507fac302
-	k8s.io/api/v2 => /tmp/v2/k8s.io/api/v2
+	k8s.io/api/v2 => /tmp/v2/k8s.io/api
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.0.0-20180601203502-8e7f43002fec
-	k8s.io/apiextensions-apiserver/v2 => /tmp/v2/k8s.io/apiextensions-apiserver/v2
+	k8s.io/apiextensions-apiserver/v2 => /tmp/v2/k8s.io/apiextensions-apiserver
 	k8s.io/apimachinery => k8s.io/apimachinery v0.0.0-20180601181227-17529ec7eadb
-	k8s.io/apimachinery/v2 => /tmp/v2/k8s.io/apimachinery/v2
+	k8s.io/apimachinery/v2 => /tmp/v2/k8s.io/apimachinery
 	k8s.io/apiserver => k8s.io/apiserver v0.0.0-20180601190550-8378ef881d4f
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.0.0-20180907072557-b3b289918979
 	k8s.io/client-go => k8s.io/client-go v7.0.0+incompatible
-	k8s.io/client-go/v2 => /tmp/v2/k8s.io/client-go/v2
+	k8s.io/client-go/v2 => /tmp/v2/k8s.io/client-go
 	k8s.io/kubernetes => k8s.io/kubernetes v1.10.4
+	sigs.k8s.io/application/v2 => /tmp/v2/sigs.k8s.io/application
 	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.1.1
-	sigs.k8s.io/controller-runtime/v2 => /tmp/v2/sigs.k8s.io/controller-runtime/v2
-	sigs.k8s.io/kustomize/v2 => /tmp/v2/sigs.k8s.io/kustomize/v2
+	sigs.k8s.io/controller-runtime/v2 => /tmp/v2/sigs.k8s.io/controller-runtime
+	sigs.k8s.io/kustomize/v2 => /tmp/v2/sigs.k8s.io/kustomize
 )

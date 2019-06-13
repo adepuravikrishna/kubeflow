@@ -8,16 +8,20 @@ local params = {
   image: "pyControllerImage",
   deploymentScope: "cluster",
   deploymentNamespace: "null",
-  pyjobVersion: "v1beta2",
+  pyjobVersion: "v1",
+  enableGangScheduling: "true",
+  monitoringPort: "8443",
 };
 
 local env = {
   namespace: "test-kf-001",
 };
 
-local pyjobCrd = pyjob.parts(params, env).crdV1beta2;
+local pyjobCrd = pyjob.parts(params, env).crd;
 
 local pytorchJobDeploy = pyjob.parts(params, env).pytorchJobDeploy;
+
+local pytorchJobService = pyjob.parts(params, env).pytorchJobService;
 
 local expectedCrd = {
   apiVersion: "apiextensions.k8s.io/v1beta1",
@@ -79,15 +83,15 @@ local expectedCrd = {
         },
       },
     },
-    version: "v1beta2",
+    version: "v1",
     versions: [
       {
-        name: "v1beta2",
+        name: "v1",
         served: true,
         storage: true,
       },
       {
-        name: "v1beta1",
+        name: "v1beta2",
         served: true,
         storage: false,
       },
@@ -102,7 +106,11 @@ local testCases = [
     expected: expectedCrd,
   },
   {
-    actual: pyjob.parts(params, env).pytorchJobDeploy(params.image, params.deploymentScope, params.deploymentNamespace),
+    actual: pyjob.parts(params, env).pytorchJobDeploy(params.image,
+                                                      params.deploymentScope,
+                                                      params.deploymentNamespace,
+                                                      params.enableGangScheduling,
+                                                      params.monitoringPort),
     expected: {
       apiVersion: "extensions/v1beta1",
       kind: "Deployment",
@@ -122,9 +130,11 @@ local testCases = [
             containers: [
               {
                 command: [
-                  "/pytorch-operator.v1beta2",
+                  "/pytorch-operator.v1",
                   "--alsologtostderr",
                   "-v=1",
+                  "--enable-gang-scheduling",
+                  "--monitoring-port=8443",
                 ],
                 env: [
                   {
@@ -165,6 +175,38 @@ local testCases = [
             ],
           },
         },
+      },
+    },
+  },
+  {
+    actual: pyjob.parts(params, env).pytorchJobService(params.monitoringPort),
+    expected: {
+      apiVersion: "v1",
+      kind: "Service",
+      metadata: {
+        annotations: {
+          "prometheus.io/scrape": "true",
+          "prometheus.io/path": "/metrics",
+          "prometheus.io/port": "8443",
+        },
+        labels: {
+          app: "pytorch-operator",
+        },
+        name: "pytorch-operator",
+        namespace: env.namespace,
+      },
+      spec: {
+        ports: [
+          {
+            name: "monitoring-port",
+            port: 8443,
+            targetPort: 8443,
+          },
+        ],
+        selector: {
+          name: "pytorch-operator",
+        },
+        type: "ClusterIP",
       },
     },
   },

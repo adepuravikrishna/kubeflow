@@ -23,10 +23,11 @@ import (
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
-	Short: "Prints the version of kfctl.",
-	Long:  `Prints the version of kfctl.`,
-	Run:   versionfunc,
-}
+	Short: "Print the version of kfctl.",
+	Long:  `Print the version of kfctl.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println(rootCmd.Use + " " + VERSION)
+	}}
 
 func init() {
 	rootCmd.AddCommand(versionCmd)

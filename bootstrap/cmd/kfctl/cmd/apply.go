@@ -15,8 +15,9 @@
 package cmd
 
 import (
+	"fmt"
 	kftypes "github.com/kubeflow/kubeflow/bootstrap/pkg/apis/apps"
-	"github.com/kubeflow/kubeflow/bootstrap/pkg/client/coordinator"
+	"github.com/kubeflow/kubeflow/bootstrap/pkg/kfapp/coordinator"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -29,34 +30,26 @@ var applyCmd = &cobra.Command{
 	Use:   "apply [all(=default)|k8s|platform]",
 	Short: "Deploy a generated kubeflow application.",
 	Long:  `Deploy a generated kubeflow application.`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		log.SetLevel(log.InfoLevel)
-		log.Info("deploying kubeflow application")
-		if applyCfg.GetBool(string(kftypes.VERBOSE)) == true {
-			log.SetLevel(log.InfoLevel)
-		} else {
+		if applyCfg.GetBool(string(kftypes.VERBOSE)) != true {
 			log.SetLevel(log.WarnLevel)
 		}
 		resource, resourceErr := processResourceArg(args)
 		if resourceErr != nil {
-			log.Errorf("invalid resource: %v", resourceErr)
-			return
+			return fmt.Errorf("invalid resource: %v", resourceErr)
 		}
-		options := map[string]interface{}{
-			string(kftypes.OAUTH_ID):     applyCfg.GetString(string(kftypes.OAUTH_ID)),
-			string(kftypes.OAUTH_SECRET): applyCfg.GetString(string(kftypes.OAUTH_SECRET)),
-		}
-		kfApp, kfAppErr := coordinator.LoadKfApp(options)
+		kfApp, kfAppErr := coordinator.LoadKfApp(map[string]interface{}{})
 		if kfAppErr != nil {
-			log.Errorf("couldn't load KfApp: %v", kfAppErr)
-			return
+			return fmt.Errorf("couldn't load KfApp: %v", kfAppErr)
 		}
-		applyErr := kfApp.Apply(resource, options)
+		applyErr := kfApp.Apply(resource)
 		if applyErr != nil {
-			log.Errorf("couldn't apply KfApp: %v", applyErr)
-			return
+			return fmt.Errorf("couldn't apply KfApp: %v", applyErr)
 		}
+		return nil
 	},
+	ValidArgs: []string{"all", "platform", "k8s"},
 }
 
 func init() {
@@ -71,22 +64,6 @@ func init() {
 	bindErr := applyCfg.BindPFlag(string(kftypes.VERBOSE), applyCmd.Flags().Lookup(string(kftypes.VERBOSE)))
 	if bindErr != nil {
 		log.Errorf("couldn't set flag --%v: %v", string(kftypes.VERBOSE), bindErr)
-		return
-	}
-	applyCmd.Flags().String(string(kftypes.OAUTH_ID), "",
-		"OAuth Client ID, GCP only. Required if ENV CLIENT_ID is not set. "+
-			"Value passed will take precedence to ENV.")
-	bindErr = applyCfg.BindPFlag(string(kftypes.OAUTH_ID), applyCmd.Flags().Lookup(string(kftypes.OAUTH_ID)))
-	if bindErr != nil {
-		log.Errorf("couldn't set flag --%v: %v", string(kftypes.OAUTH_ID), bindErr)
-		return
-	}
-	applyCmd.Flags().String(string(kftypes.OAUTH_SECRET), "",
-		"OAuth Client Secret, GCP only. Required if ENV CLIENT_SECRET is not set. "+
-			"Value passed will take precedence to ENV.")
-	bindErr = applyCfg.BindPFlag(string(kftypes.OAUTH_SECRET), applyCmd.Flags().Lookup(string(kftypes.OAUTH_SECRET)))
-	if bindErr != nil {
-		log.Errorf("couldn't set flag --%v: %v", string(kftypes.OAUTH_SECRET), bindErr)
 		return
 	}
 }

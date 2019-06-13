@@ -21,6 +21,7 @@
           path: params.path,
           server: params.serverIP,
         },
+        storageClassName: "nfs-storage",
       },
     },
     persistentVolume:: persistentVolume,
@@ -36,7 +37,8 @@
         accessModes: [
           "ReadWriteMany",
         ],
-        storageClassName: "",
+        storageClassName: "nfs-storage",
+        volumeName: params.name,
         resources: {
           requests: {
             storage: params.storageCapacity,

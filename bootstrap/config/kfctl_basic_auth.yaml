@@ -5,42 +5,50 @@
 repo: /path/to/local/tmp/containing/kubeflow
 packages:
   - argo
-  - application
   - common
   - examples
   - gcp
+  - admission-webhook  
   - jupyter
   - katib
   - metacontroller
   - modeldb
   - mpi-job
   - pipeline
-  - profiles
   - pytorch-job
   - seldon
   - tensorboard
   - tf-serving
   - tf-training
 components:
+# ordering is important
+  - metacontroller
   - ambassador
-  - application
   - argo
   - basic-auth
   - basic-auth-ingress
   - centraldashboard
   - cert-manager
   - cloud-endpoints
-  - jupyter
+  - gpu-driver
+  - admission-webhook  
   - jupyter-web-app
   - katib
-  - metacontroller
   - notebook-controller
   - pipeline
-  - profiles
   - pytorch-operator
+  - spartakus
   - tensorboard
   - tf-job-operator
 componentParams:
+  argo:
+  - initRequired: true
+    name: injectIstio
+    value: "false"
+  centraldashboard:
+  - initRequired: true
+    name: injectIstio
+    value: "false"
   cert-manager:
     - name: acmeEmail
       # TODO change value on the fly: use your email for ssl cert
@@ -55,16 +63,9 @@ componentParams:
       # TODO change value on the fly: replace with user-provide parameters. This need to be fully qualified domain name to use with ingress.
       value: <deployName>.endpoints.<Project>.cloud.goog
       initRequired: true
-
-  application:
-    - name: components
-      value: <list-of-components>
   cloud-endpoints:
     - name: secretName
       value: admin-gcp-sa
-  jupyter:
-    - name: platform
-      value: gke
   ambassador:
     - name: ambassadorServiceType
       value: NodePort
@@ -73,4 +74,35 @@ componentParams:
       value: <deployName>-storage-metadata-store
     - name: minioPd
       value: <deployName>-storage-artifact-store
+    - name: injectIstio
+      value: "false"
+  spartakus:
+    - name: usageId
+      value: <randomly-generated-id>
+      initRequired: true
+    - name: reportUsage
+      value: "true"
+      initRequired: true
+  notebook-controller:
+    - name: injectGcpCredentials
+      value: "true"
+    - initRequired: true
+      name: injectIstio
+      value: "false"
+  jupyter-web-app:
+  - initRequired: true
+    name: injectIstio
+    value: "false"
+  katib:
+  - initRequired: true
+    name: injectIstio
+    value: "false"
+  tensorboard:
+  - initRequired: true
+    name: injectIstio
+    value: "false"
+  tf-job-operator:
+  - initRequired: true
+    name: injectIstio
+    value: "false"
 platform: gcp

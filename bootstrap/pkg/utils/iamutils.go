@@ -20,22 +20,12 @@ import (
 	"fmt"
 	"github.com/deckarep/golang-set"
 	"github.com/ghodss/yaml"
-	log "github.com/sirupsen/logrus"
+	kfapis "github.com/kubeflow/kubeflow/bootstrap/pkg/apis"
 	"golang.org/x/net/context"
-	"golang.org/x/oauth2/google"
 	"google.golang.org/api/cloudresourcemanager/v1"
 	"io/ioutil"
 	"net/http"
 )
-
-func getServiceClient(ctx context.Context) (*http.Client, error) {
-	client, err := google.DefaultClient(ctx, cloudresourcemanager.CloudPlatformScope)
-	if err != nil {
-		log.Fatalf("Could not get authenticated client: %v", err)
-		return nil, err
-	}
-	return client, nil
-}
 
 func transformSliceToInterface(slice []string) []interface{} {
 	ret := make([]interface{}, len(slice))
@@ -53,33 +43,49 @@ func transformInterfaceToSlice(inter []interface{}) []string {
 	return ret
 }
 
-func getBindingSet(policy *cloudresourcemanager.Policy) map[string]mapset.Set {
-	bindings := make(map[string]mapset.Set)
-	for _, binding := range policy.Bindings {
-		val := transformSliceToInterface(binding.Members)
-		if set, ok := bindings[binding.Role]; ok {
-			set.Union(mapset.NewSetFromSlice(val))
-		} else {
-			bindings[binding.Role] = mapset.NewSetFromSlice(val)
+// Gets IAM plicy from GCP for the whole project.
+func GetIamPolicy(project string, gcpClient *http.Client) (*cloudresourcemanager.Policy, error) {
+	ctx := context.Background()
+	service, serviceErr := cloudresourcemanager.New(gcpClient)
+	if serviceErr != nil {
+		return nil, &kfapis.KfError{
+			Code:    int(kfapis.INVALID_ARGUMENT),
+			Message: serviceErr.Error(),
 		}
 	}
-	return bindings
+	req := &cloudresourcemanager.GetIamPolicyRequest{}
+	if policy, err := service.Projects.GetIamPolicy(project, req).Context(ctx).Do(); err == nil {
+		return policy, nil
+	} else {
+		return nil, &kfapis.KfError{
+			Code:    int(kfapis.INVALID_ARGUMENT),
+			Message: err.Error(),
+		}
+	}
 }
 
-// Gets IAM plicy from GCP for the whole project.
-func GetIamPolicy(project string) (*cloudresourcemanager.Policy, error) {
-	ctx := context.Background()
-	client, clientErr := getServiceClient(ctx)
-	if clientErr != nil {
-		return nil, clientErr
+// Modify currentPolicy: Remove existing bindings associated with service accounts of current deployment
+func ClearIamPolicy(currentPolicy *cloudresourcemanager.Policy, deployName string, project string) {
+	serviceAccounts := map[string]bool{
+		fmt.Sprintf("serviceAccount:%v-admin@%v.iam.gserviceaccount.com", deployName, project): true,
+		fmt.Sprintf("serviceAccount:%v-user@%v.iam.gserviceaccount.com", deployName, project):  true,
+		fmt.Sprintf("serviceAccount:%v-vm@%v.iam.gserviceaccount.com", deployName, project):    true,
 	}
-	service, serviceErr := cloudresourcemanager.New(client)
-	if serviceErr != nil {
-		return nil, serviceErr
+	var newBindings []*cloudresourcemanager.Binding
+	for _, binding := range currentPolicy.Bindings {
+		newBinding := cloudresourcemanager.Binding{
+			Role: binding.Role,
+		}
+		for _, member := range binding.Members {
+			// Skip bindings for service accounts of current deployment.
+			// We'll reset bindings for them in following steps.
+			if _, ok := serviceAccounts[member]; !ok {
+				newBinding.Members = append(newBinding.Members, member)
+			}
+		}
+		newBindings = append(newBindings, &newBinding)
 	}
-
-	req := &cloudresourcemanager.GetIamPolicyRequest{}
-	return service.Projects.GetIamPolicy(project, req).Context(ctx).Do()
+	currentPolicy.Bindings = newBindings
 }
 
 // TODO: Move type definitions to appropriate place.
@@ -99,12 +105,18 @@ type IamBindingsYAML struct {
 func ReadIamBindingsYAML(filename string) (*cloudresourcemanager.Policy, error) {
 	buf, bufErr := ioutil.ReadFile(filename)
 	if bufErr != nil {
-		return nil, bufErr
+		return nil, &kfapis.KfError{
+			Code:    int(kfapis.INVALID_ARGUMENT),
+			Message: bufErr.Error(),
+		}
 	}
 
 	iam := IamBindingsYAML{}
 	if err := yaml.Unmarshal(buf, &iam); err != nil {
-		return nil, err
+		return nil, &kfapis.KfError{
+			Code:    int(kfapis.INVALID_ARGUMENT),
+			Message: err.Error(),
+		}
 	}
 
 	entries := make(map[string]mapset.Set)
@@ -131,51 +143,58 @@ func ReadIamBindingsYAML(filename string) (*cloudresourcemanager.Policy, error) 
 }
 
 // Either patch or remove role bindings from `src` policy.
-func RewriteIamPolicy(src *cloudresourcemanager.Policy,
-	adding *cloudresourcemanager.Policy,
-	deleting *cloudresourcemanager.Policy) error {
-	if src == nil {
-		return fmt.Errorf("Source IAM policy is nil.")
-	}
-	curr := getBindingSet(src)
-	if adding != nil {
-		patch := getBindingSet(adding)
-		for role, members := range patch {
-			log.Infof("%v adding: %+v", role, members)
-			if m, ok := curr[role]; ok {
-				m.Union(members)
-			} else {
-				curr[role] = members
-			}
-		}
-	}
-	if deleting != nil {
-		removal := getBindingSet(deleting)
-		for role, members := range removal {
-			if m, ok := curr[role]; ok {
-				m.Difference(members)
-			}
+func RewriteIamPolicy(currentPolicy *cloudresourcemanager.Policy, adding *cloudresourcemanager.Policy) {
+	policyMap := map[string]map[string]bool{}
+	for _, binding := range currentPolicy.Bindings {
+		policyMap[binding.Role] = make(map[string]bool)
+		for _, member := range binding.Members {
+			policyMap[binding.Role][member] = true
 		}
 	}
 
-	return nil
+	for _, binding := range adding.Bindings {
+		for _, member := range binding.Members {
+			if _, ok := policyMap[binding.Role]; !ok {
+				policyMap[binding.Role] = make(map[string]bool)
+			}
+			policyMap[binding.Role][member] = true
+		}
+	}
+	var newBindings []*cloudresourcemanager.Binding
+	for role, memberSet := range policyMap {
+		binding := cloudresourcemanager.Binding{}
+		binding.Role = role
+		for member, exists := range memberSet {
+			if exists {
+				binding.Members = append(binding.Members, member)
+			}
+		}
+		newBindings = append(newBindings, &binding)
+	}
+	currentPolicy.Bindings = newBindings
 }
 
 // "Override" project's IAM policy with given config.
-func SetIamPolicy(project string, policy *cloudresourcemanager.Policy) error {
+func SetIamPolicy(project string, policy *cloudresourcemanager.Policy, gcpClient *http.Client) error {
 	ctx := context.Background()
-	client, clientErr := getServiceClient(ctx)
-	if clientErr != nil {
-		return clientErr
-	}
-	service, serviceErr := cloudresourcemanager.New(client)
+	service, serviceErr := cloudresourcemanager.New(gcpClient)
 	if serviceErr != nil {
-		return serviceErr
+		return &kfapis.KfError{
+			Code:    int(kfapis.INVALID_ARGUMENT),
+			Message: serviceErr.Error(),
+		}
 	}
 
 	req := &cloudresourcemanager.SetIamPolicyRequest{
 		Policy: policy,
 	}
 	_, err := service.Projects.SetIamPolicy(project, req).Context(ctx).Do()
-	return err
+	if err == nil {
+		return nil
+	} else {
+		return &kfapis.KfError{
+			Code:    int(kfapis.INVALID_ARGUMENT),
+			Message: err.Error(),
+		}
+	}
 }

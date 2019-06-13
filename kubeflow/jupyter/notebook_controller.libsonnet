@@ -83,6 +83,17 @@
                 command: [
                   "/manager",
                 ],
+                env: (if util.toBool(params.injectGcpCredentials) then [
+                  {
+                    name: "POD_LABELS",
+                    value: "gcp-cred-secret=user-gcp-sa,gcp-cred-secret-filename=user-gcp-sa.json",
+                  },
+                ] else []) + (if util.toBool(params.injectIstio) then [
+                  {
+                    name: "USE_ISTIO",
+                    value: "true",
+                  },
+                ] else []),
               },
             ],
           },
@@ -129,6 +140,7 @@
           ],
           resources: [
             "services",
+            "pods",
           ],
           verbs: [
             "*",
@@ -141,6 +153,17 @@
           resources: [
             "notebooks",
             "notebooks/status",
+          ],
+          verbs: [
+            "*",
+          ],
+        },
+        {
+          apiGroups: [
+            "networking.istio.io",
+          ],
+          resources: [
+            "virtualservices",
           ],
           verbs: [
             "*",

@@ -83,6 +83,53 @@
     },  //service
     centralDashboardService:: centralDashboardService,
 
+    local centralDashboardIstioVirtualService = {
+      apiVersion: "networking.istio.io/v1alpha3",
+      kind: "VirtualService",
+      metadata: {
+        name: "centraldashboard",
+        namespace: params.namespace,
+      },
+      spec: {
+        hosts: [
+          "*",
+        ],
+        gateways: [
+          "kubeflow-gateway",
+        ],
+        http: [
+          {
+            match: [
+              {
+                uri: {
+                  prefix: "/",
+                },
+              },
+            ],
+            rewrite: {
+              uri: "/",
+            },
+            route: [
+              {
+                destination: {
+                  host: std.join(".", [
+                    "centraldashboard",
+                    params.namespace,
+                    "svc",
+                    params.clusterDomain,
+                  ]),
+                  port: {
+                    number: 80,
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },  // centralDashboardIstioVirtualService
+    centralDashboardIstioVirtualService:: centralDashboardIstioVirtualService,
+
     local centralDashboardServiceAccount = {
       apiVersion: "v1",
       kind: "ServiceAccount",
@@ -105,8 +152,12 @@
       },
       rules: [
         {
-          apiGroups: [""],
+          apiGroups: [
+              "",
+              "app.k8s.io"
+          ],
           resources: [
+            "applications",
             "pods",
             "pods/exec",
             "pods/log",
@@ -169,6 +220,7 @@
           apiGroups: [""],
           resources: [
             "namespaces",
+            "nodes",
             "events"
           ],
           verbs: [
@@ -214,7 +266,9 @@
       self.centralDashboardRoleBinding,
       self.centralDashboardClusterRole,
       self.centralDashboardClusterRoleBinding,
-    ],
+    ] + if util.toBool(params.injectIstio) then [
+      self.centralDashboardIstioVirtualService,
+    ] else [],
 
     list(obj=self.all):: util.list(obj),
   },

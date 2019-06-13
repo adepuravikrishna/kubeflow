@@ -26,23 +26,64 @@ workflows:
     params:
       installIstio: true
       workflowName: deployapp-istio
-  # kfctl test runs tests on gke.
   - app_dir: kubeflow/kubeflow/testing/workflows
-    component: kfctl_test
-    name: kfctl
+    component: kfctl_go_test
+    name: kfctl-go-iap-istio
     job_types:
       - presubmit
       - postsubmit
       - periodic
     include_dirs:
-      - scripts/*
+      - bootstrap/*
+      - deployment/*
+      - dependencies/*
       - kubeflow/*
       - testing/*
-      - deployment/*
     params:
       platform: gke
       gkeApiVersion: v1
-      workflowName: kfctl
+      workflowName: kfctl-go
+      useBasicAuth: false
+      useIstio: true
+  # Run basic auth test as part of every periodic and postsubmit run. 
+  - app_dir: kubeflow/kubeflow/testing/workflows
+    component: kfctl_go_test
+    name: kfctl-go-basic-auth
+    job_types:
+      - postsubmit
+      - periodic
+    include_dirs:
+      - bootstrap/*
+      - deployment/*
+      - kubeflow/*
+      - testing/*
+    params:
+      platform: gke
+      gkeApiVersion: v1
+      workflowName: kfctl-go
+      useBasicAuth: true
+      useIstio: true
+  # Only run  kfctl presubmit test with basic auth if
+  # files related to basic auth are modified.
+  - app_dir: kubeflow/kubeflow/testing/workflows
+    component: kfctl_go_test
+    name: kfctl-go-basic-auth
+    job_types:
+      - presubmit
+    include_dirs:
+      # If kfctl is modified make sure basic auth still works
+      - bootstrap/*
+      - kubeflow/kubeflow/common/basic-auth.libsonnet
+      - kubeflow/kubeflow/common/prototypes/basic-auth.jsonnet
+      - testing/kfctl/*
+      - testing/workflows/kfctl_go_test.jsonnet
+    params:
+      platform: gke
+      gkeApiVersion: v1
+      workflowName: kfctl-go
+      useBasicAuth: true
+      useIstio: true
+  # kfctl test runs tests on gke.
   - app_dir: kubeflow/kubeflow/testing/workflows
     component: kfctl_test
     name: kfctl-beta
@@ -77,7 +118,9 @@ workflows:
     component: workflows
     name: kubeflow-e2e-minikube
     job_types:
-      - presubmit
+      # TODO(https://github.com/kubeflow/kubeflow/issues/2703): Reenable minikube on presubmit
+      # when the test is fixed.
+      # - presubmit
       - postsubmit
       - periodic
     params:

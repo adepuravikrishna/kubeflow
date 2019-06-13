@@ -5,44 +5,36 @@
 repo: /path/to/local/tmp/containing/kubeflow
 packages:
   - argo
-  - application
   - common
   - examples
   - gcp
+  - admission-webhook  
   - jupyter
   - katib
   - metacontroller
   - modeldb
   - mpi-job
   - pipeline
-  - profiles
   - pytorch-job
   - seldon
   - tensorboard
   - tf-serving
   - tf-training
 components:
+# ordering is important
+  - metacontroller
   - ambassador
-  - application
   - argo
   - centraldashboard
-  - jupyter
+  - admission-webhook  
   - jupyter-web-app
   - katib
-  - metacontroller
   - notebook-controller
   - pipeline
-  - profiles
   - pytorch-operator
   - tensorboard
   - tf-job-operator
 componentParams:
-  application:
-    - name: components
-      value: <list-of-components>
-  jupyter:
-    - name: platform
-      value: none
   ambassador:
     - name: ambassadorServiceType
       value: NodePort

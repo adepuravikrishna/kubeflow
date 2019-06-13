@@ -1,6 +1,3 @@
-# Copyright (c) Jupyter Development Team.
-# Distributed under the terms of the Modified BSD License.
-
 # use basic syntax for now
 FROM gcr.io/kaggle-images/python:latest
 
@@ -19,8 +16,9 @@ ENV PATH $CONDA_DIR/bin:$PATH
 # Use bash instead of sh
 SHELL ["/bin/bash", "-c"]
 
-# add https support
-RUN apt-get update && apt-get install -yq --no-install-recommends apt-transport-https
+# add https support 
+RUN apt-get update && apt-get install -yq --no-install-recommends \
+    apt-transport-https locales lsb-release wget
 
 RUN echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen
@@ -41,9 +39,8 @@ RUN export CLOUD_SDK_REPO="cloud-sdk-$(lsb_release -c -s)" && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add - && \
     apt-get update && \
     apt-get install -y google-cloud-sdk kubectl && \
-    # pin to 0.8.1 due to conflicts with tornado>=5.x and pyzmq>=17.x
     # we just really need jupyterhub-singleuser for our KF scripts
-    pip install jupyterhub==0.8.1 \
+    pip install jupyterhub==0.9.6 \
     # Kaggle image doesn't include their own API package (yet)
     kaggle
 
@@ -56,25 +53,8 @@ RUN cd /tmp && \
 
 RUN chown -R ${NB_USER}:users $HOME
 
-ENV GITHUB_REF https://raw.githubusercontent.com/kubeflow/kubeflow/master/components/tensorflow-notebook-image
-
-ADD --chown=jovyan:users $GITHUB_REF/jupyter_notebook_config.py /tmp
-
-# Wipe $HOME for PVC detection later
-WORKDIR $HOME
-RUN rm -fr $(ls -A $HOME)
-
-# Get init scripts from kubeflow
-ADD --chown=jovyan:users \
-    $GITHUB_REF/start-singleuser.sh \
-    $GITHUB_REF/start-notebook.sh \
-    $GITHUB_REF/start.sh \
-    $GITHUB_REF/pvc-check.sh \
-    /usr/local/bin/
-
-RUN chmod a+rx /usr/local/bin/*
-
 # Configure container startup
 EXPOSE 8888
+USER jovyan
 ENTRYPOINT ["tini", "--"]
-CMD ["start-notebook.sh"]
+CMD ["sh","-c", "jupyter notebook --notebook-dir=/home/jovyan --ip=0.0.0.0 --no-browser --allow-root --port=8888 --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --NotebookApp.base_url=${NB_PREFIX}"]

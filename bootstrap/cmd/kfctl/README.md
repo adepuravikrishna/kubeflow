@@ -1,10 +1,37 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [kfctl golang client](#kfctl-golang-client)
+  - [Overview](#overview)
+  - [Requirements](#requirements)
+  - [API and Packaging](#api-and-packaging)
+    - [KfApp Interface](#kfapp-interface)
+  - [Usage](#usage)
+  - [Subcommands](#subcommands)
+    - [**init**](#init)
+    - [**generate**](#generate)
+    - [**apply**](#apply)
+    - [**delete**](#delete)
+  - [Extending kfctl](#extending-kfctl)
+    - [Building the sample plugin](#building-the-sample-plugin)
+  - [Testing](#testing)
+    - [Testing kfctl (tests plugin functionality, `kfctl init`, `kfctl generate`)](#testing-kfctl-tests-plugin-functionality-kfctl-init-kfctl-generate)
+    - [Testing `kfctl init` for all platforms](#testing-kfctl-init-for-all-platforms)
+    - [Testing `kfctl generate` for all platforms](#testing-kfctl-generate-for-all-platforms)
+      - [app.yaml example for --platform gcp](#appyaml-example-for---platform-gcp)
+  - [gcp-click-to-deploy (no changes)](#gcp-click-to-deploy-no-changes)
+  - [golang modules and versioned packages](#golang-modules-and-versioned-packages)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # kfctl golang client
 
 ## Overview
 
 The new `kfctl` client replaces `kfctl.sh` and is implemented in golang.
 
-Note: This README.md will be updated on an ongoing basis to reflect features, bug fixes.
+**Note**: This README.md will be updated on an ongoing basis to reflect features, bug fixes.
 
 ## Requirements
 
@@ -56,7 +83,7 @@ These include:
 - platform: **gcp** 
   - bootstrap/pkg/client/gcp/gcp.go
 
-kfctl also statically links package managers that are used by the platforms
+kfctl also statically links package managers that are used by the platforms.
 These include:
 
 - package manager: **ksonnet**
@@ -80,8 +107,8 @@ described below in [Extending kfctl](#extending-kfctl).
      generate    Generate a kubeflow application where resources is one of 'platform|k8s|all'.
      help        Help about any command
      init        Create a kubeflow application under <[path/]name>
-     show        Deploy a generated kubeflow application.
-     version     Prints the version of kfctl.
+     show        Show a generated kubeflow application.
+     version     Print the version of kfctl.
    
    Flags:
      -h, --help   help for kfctl
@@ -106,7 +133,7 @@ kfctl apply all
 
 ```
 Create a kubeflow application under <[path/]name>. The <[path/]name> argument can either be a full path
-or a <name>. If just <name> a directory <name> will be created in the current directory.
+or a <name>. If just <name>, a directory <name> will be created in the current directory.
 
 Usage:
   kfctl init <[path/]name> [flags]
@@ -163,6 +190,8 @@ Flags:
       --oauth_secret string   OAuth Client ID, GCP only. Required if ENV CLIENT_SECRET is not set. Value passed will take precedence to ENV.
   -V, --verbose               verbose output default is false```
 
+```
+
 ### **delete** 
 
 (kubeflow/bootstrap/cmd/kfctl/cmd/delete.go)
@@ -175,7 +204,8 @@ Usage:
 
 Flags:
   -h, --help      help for delete
-  -V, --verbose   verbose output default is false```
+  -V, --verbose   verbose output default is false
+```
 
 ---
 
@@ -229,7 +259,7 @@ make test-generate
 
 #### app.yaml example for --platform gcp 
 
-```
+```yaml
 apiVersion: client.apps.kubeflow.org/v1alpha1
 kind: Client
 metadata:

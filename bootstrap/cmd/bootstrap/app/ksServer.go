@@ -24,7 +24,8 @@ import (
 	"github.com/ksonnet/ksonnet/pkg/actions"
 	kApp "github.com/ksonnet/ksonnet/pkg/app"
 	"github.com/ksonnet/ksonnet/pkg/client"
-	kstypes "github.com/kubeflow/kubeflow/bootstrap/pkg/apis/apps/ksonnet/v1alpha1"
+	configtypes "github.com/kubeflow/kubeflow/bootstrap/config"
+	kstypes "github.com/kubeflow/kubeflow/bootstrap/pkg/apis/apps/kfdef/v1alpha1"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	log "github.com/sirupsen/logrus"
@@ -57,6 +58,8 @@ const KubeflowFolder = "ks_app"
 const DmFolder = "gcp_config"
 const CloudShellFolder = "kf_util"
 const IstioFolder = "istio"
+// default k8s spec to use
+const K8sSpecPath = "../bootstrap/k8sSpec/v1.11.7/api/openapi-spec/swagger.json"
 
 const MetadataStoreDiskSuffix = "-metadata-store"
 const ArtifactStoreDiskSuffix = "-artifact-store"
@@ -418,7 +421,9 @@ func (s *ksServer) InstallIstio(ctx context.Context, req CreateRequest) error {
 		log.Errorf("Failed to create istio manifest: %v", err)
 		return err
 	}
-	err = CreateResourceFromFile(config, path.Join(regPath, "../dependencies/istio/kf-istio-resources.yaml"))
+	//TODO should be a cli parameter
+	nv := configtypes.NameValue{Name: "namespace", Value: req.Namespace}
+	err = CreateResourceFromFile(config, path.Join(regPath, "../dependencies/istio/kf-istio-resources.yaml"), nv)
 	if err != nil {
 		log.Errorf("Failed to create kubeflow istio resource: %v", err)
 		return err
@@ -465,13 +470,20 @@ func (s *ksServer) CreateApp(ctx context.Context, request CreateRequest, dmDeplo
 	} else {
 		log.Infof("Creating app %v", request.Name)
 		log.Infof("Using K8s host %v", config.Host)
+		absSpecPath := path.Join(s.knownRegistries["kubeflow"].RegUri, K8sSpecPath)
+		specFlag := "file:" + absSpecPath
+		// Fetch k8s api spec from github if not found locally
+		if _, specErr := os.Stat(absSpecPath); specErr != nil {
+			log.Infof("k8s spec cache not found, using remote resource.")
+			specFlag = "version:v1.11.7"
+
+		}
 		deployConfDir := path.Join(repoDir, GetRepoName(request.Project), kfVersion, request.Name)
 		if err = os.MkdirAll(deployConfDir, os.ModePerm); err != nil {
 			return fmt.Errorf("Cannot create deployConfDir: %v", err)
 		}
 		appDir := path.Join(deployConfDir, KubeflowFolder)
 		_, err = s.fs.Stat(appDir)
-
 		if err != nil {
 			options := map[string]interface{}{
 				actions.OptionFs:      s.fs,
@@ -479,9 +491,8 @@ func (s *ksServer) CreateApp(ctx context.Context, request CreateRequest, dmDeplo
 				actions.OptionEnvName: envName,
 				actions.OptionNewRoot: appDir,
 				actions.OptionServer:  config.Host,
-				// TODO(jlewi): What is the proper version to use? It shouldn't be a version like v1.9.0-gke as that
-				// will create an error because ksonnet will be unable to fetch a swagger spec.
-				actions.OptionSpecFlag:              "version:v1.11.7",
+				// Use k8s swagger spec from kubeflow repo cache.
+				actions.OptionSpecFlag:              specFlag,
 				actions.OptionNamespace:             request.Namespace,
 				actions.OptionSkipDefaultRegistries: true,
 			}

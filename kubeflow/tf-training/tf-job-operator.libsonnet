@@ -58,7 +58,6 @@
       spec: {
         group: "kubeflow.org",
         scope: "Namespaced",
-        version: "v1beta1",
         names: {
           kind: "TFJob",
           singular: "tfjob",
@@ -82,7 +81,7 @@
         validation: { openAPIV3Schema: openAPIV3Schema },
         versions: [
           {
-            name: "v1beta1",
+            name: "v1",
             served: true,
             storage: true,
           },
@@ -98,12 +97,18 @@
 
     local tfJobContainer = {
       command: [
-        "/opt/kubeflow/tf-operator.v1beta2",
+        "/opt/kubeflow/tf-operator.v1",
         "--alsologtostderr",
         "-v=1",
       ] + if params.deploymentScope == "namespace" &&
              params.deploymentNamespace != null then [
         "--namespace=" + params.deploymentNamespace,
+      ] else []
+        + if util.toBool(params.enableGangScheduling) then [
+        "--enable-gang-scheduling",
+      ] else []
+        + if params.monitoringPort != null then [
+          "--monitoring-port=" + params.monitoringPort,
       ] else [],
       env:
         if params.deploymentScope == "namespace" && params.deploymentNamespace != null then [{
@@ -176,6 +181,37 @@
       },
     },
     tfJobDeployment:: tfJobDeployment,
+
+    local tfJobService = {
+      apiVersion: "v1",
+      kind: "Service",
+      metadata: {
+        labels: {
+          app: "tf-job-operator",
+        },
+        name: params.name,
+        namespace: params.namespace,
+        annotations: {
+          "prometheus.io/scrape": "true",
+          "prometheus.io/path": "/metrics",
+          "prometheus.io/port": params.monitoringPort,
+        },
+      },
+      spec: {
+        ports: [
+          {
+            name: "monitoring-port",
+            port: std.parseInt(params.monitoringPort),
+            targetPort: std.parseInt(params.monitoringPort)
+          }
+        ],
+        selector: {
+          name: "tf-job-operator",
+        },
+        type: "ClusterIP",
+      },
+    },  // tfJobService
+    tfJobService:: tfJobService,
 
     local tfConfigMap = {
       apiVersion: "v1",
@@ -293,6 +329,16 @@
         withVerbsMixin([
         "*",
       ],),
+      tfGangScheduleRule:: rule.new() + rule.
+        withApiGroupsMixin([
+        "scheduling.incubator.k8s.io",
+      ],).
+        withResourcesMixin([
+        "podgroups",
+      ],).
+        withVerbsMixin([
+        "*",
+      ],),
     },
     local role(inst) = {
       local ns =
@@ -319,7 +365,9 @@
         rules.tfBatchRule,
         rules.tfCoreRule,
         rules.tfAppsRule,
-      ],),
+      ] + if util.toBool(params.enableGangScheduling) then [
+        rules.tfGangScheduleRule,
+      ] else []),
     ),
     tfOperatorRole:: tfOperatorRole,
 
@@ -383,6 +431,53 @@
       },
     },
     tfUiService:: tfUiService,
+
+    local tfUiIstioVirtualService = {
+      apiVersion: "networking.istio.io/v1alpha3",
+      kind: "VirtualService",
+      metadata: {
+        name: "tf-job-dashboard",
+        namespace: params.namespace,
+      },
+      spec: {
+        hosts: [
+          "*",
+        ],
+        gateways: [
+          "kubeflow-gateway",
+        ],
+        http: [
+          {
+            match: [
+              {
+                uri: {
+                  prefix: "/tfjobs/",
+                },
+              },
+            ],
+            rewrite: {
+              uri: "/tfjobs/",
+            },
+            route: [
+              {
+                destination: {
+                  host: std.join(".", [
+                    "tf-job-dashboard",
+                    params.namespace,
+                    "svc",
+                    params.clusterDomain,
+                  ]),
+                  port: {
+                    number: 80,
+                  },
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },  // tfUiIstioVirtualService
+    tfUiIstioVirtualService:: tfUiIstioVirtualService,
 
     local tfUiServiceAccount = {
       apiVersion: "v1",
@@ -495,6 +590,7 @@
     all:: [
       self.tfJobCrd,
       self.tfJobDeployment,
+      self.tfJobService,
       self.tfConfigMap,
       self.tfServiceAccount,
       self.tfOperatorRole,
@@ -504,7 +600,9 @@
       self.tfUiDeployment,
       self.tfUiRole,
       self.tfUiRoleBinding,
-    ],
+    ] + if util.toBool(params.injectIstio) then [
+      self.tfUiIstioVirtualService,
+    ] else [],
 
     list(obj=self.all):: util.list(obj),
   },

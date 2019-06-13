@@ -5,75 +5,160 @@
 :host {
     @apply --layout-vertical;
     --accent-color: #007dfc;
-    --primary-background-color: #003c75;
-    --sidebar-default-color: #ffffff4f;
-    --border-color: #f4f4f6;
+    --primary-background-color: #0a3b71;
+    --sidebar-default-color: rgba(255, 255, 255, 0.5);
+    --divider-color: #dadce0;
+    --border-color: #eeeeef;
+    --icon-color: #202124;
+    --external-icon-color: var(--google-grey-700);
+    --iframe-link: {
+        text-decoration: none;
+        color: inherit;
+        outline: none;
+    }
 }
 
 .flex {
     flex: 1
 }
 
-.bottom {
-    margin-top: auto;
-    @apply --layout-horizontal;
-}
-
-app-drawer {
+#MainDrawer {
     color: white;
-    background: var(--primary-background-color);
     --app-drawer-content-container: {
-        background: transparent;
-        @apply --layout-vertical;
+        background: var(--primary-background-color) !important;
+        display: flex !important;
+        flex-direction: column !important;
     }
 }
 
-app-drawer .menu-item {
-    cursor: pointer;
-    transition: background .25s;
-    font-family: Google Sans;
-    color: var(--sidebar-default-color);
+app-drawer-layout {
+    --app-drawer-width: 240px;
 }
 
-app-drawer .menu-item+.divider {
+app-drawer-layout[narrow] #MainDrawer {
+    --app-drawer-content-container: {
+        box-shadow: 0 0 6px -1px #000;
+    }
+}
+
+app-drawer-layout[bleed] #MainDrawer {
+    background: var(--primary-background-color);
+    --app-drawer-content-container: {
+        background: transparent !important;
+    }
+}
+
+#MainDrawer .logo {
+    margin-left: 1em;
+}
+
+#MainDrawer a:hover {
+    color: inherit
+}
+
+#MainDrawer iframe-link:hover, #MainDrawer iron-selector>a:hover {
+    text-decoration: none;
+}
+
+#MainDrawer .menu-item {
+    color: var(--sidebar-default-color);
+    cursor: pointer;
+    font-family: Google Sans;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    line-height: 24px;
+    margin: .5em 0;
+    transition: background .25s;
+    --paper-item-icon-width: 36px;
+
+}
+
+#MainDrawer .divider {
     width: 90%;
     margin: 1em auto;
-    border-bottom: 2px solid var(--sidebar-default-color)
+    border-bottom: 1px solid var(--sidebar-default-color)
 }
 
-app-drawer .menu-item:hover {
+#MainDrawer .menu-item:hover {
     background: #ffffff1b
 }
 
-app-drawer .iron-selected>.menu-item {
-    background: #ffffff3b;
-    color: white;
-    font-weight: 100
+#MainDrawer .iron-selected>.menu-item {
+    color: #fff;
 }
 
-app-drawer .footer {
+#MainDrawer .iron-selected>.menu-item::after {
+    content: '';
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background: white;
+}
+
+#MainDrawer .footer {
     padding: 1.25rem;
     font-size: .9em;
     color: var(--sidebar-default-color);
     line-height: 1.5em
 }
 
-app-drawer .footer>.build {
+#MainDrawer .footer>.build {
     font-size: .9em;
     font-style: italic;
     color: rgba(255, 255, 255, 0.64)
 }
 
-#NamespaceSelector {
-    position: absolute;
-    left: 1em;
-    top: 50%;
-    transform: translateY(-50%)
+app-toolbar {
+    @apply --layout-horizontal;
+    @apply --layout-center;
+    background: white;
+    transition: background .25s;
 }
 
-app-toolbar {
-    display: flex;
-    justify-content: center
+app-toolbar>header {
+    margin-top: auto;
+}
+
+#Narrow-Slider {
+    @apply --layout-horizontal;
+    @apply --layout-center;
+}
+
+#Narrow-Slider[hidden] {
+    display: none;
+}
+
+#Narrow-Slider>.Logo {
+    margin: 0;
+    color: var(--logo-color, var(--primary-background-color));
+}
+
+#Narrow-Slider>.Logo>svg {
+    height: 24px;
+    margin-top: 4px;
+}
+
+#Narrow-Slider>.Logo>svg * {
+    fill: currentColor;
+}
+
+#NamespaceSelector {
+    flex-basis: 33%;
+}
+
+#NamespaceSelector>paper-dropdown-menu {
+    color: var(--accent-color);
+    --paper-input-container-focus-color: var(--accent-color);
+}
+
+#ViewTabs {
+    @apply --layout-horizontal;
+    @apply --layout-center-justified;
+    border-bottom: 1px solid rgba(0, 0, 0, .12);
 }
 
 paper-tabs {
@@ -86,7 +171,7 @@ paper-tabs {
 }
 
 paper-tab {
-    padding: 0 2em
+    padding: 0 2em;
 }
 
 paper-tab.iron-selected {
@@ -101,8 +186,22 @@ paper-tab[link] a {
     text-decoration: none;
 }
 
+paper-tab[link] a:hover {
+    text-decoration: none;
+}
+
+app-header {
+    box-shadow: 0 2px 6px 1px rgba(232, 234, 237, 0.5), 0 1px 3px 1px rgba(60, 64, 67, 0.15);
+}
+
 app-header-layout {
     @apply --layout-vertical
+}
+
+#Content {
+    @apply --layout-vertical;
+    background: #f1f3f4;
+    height: 100%;
 }
 
 neon-animated-pages {
@@ -111,139 +210,56 @@ neon-animated-pages {
 
 neon-animatable {
     @apply --layout-vertical;
+    background: #f1f3f4;
     height: 100%;
 }
 
-neon-animatable#iframe-page {
-    top: -64px;
+#User-Badge {
+    right: 16px;
+    position: absolute;
+}
+
+#User-Badge>.image {
+    width: 2em;
+    height: 2em;
+    border-radius: 50%;
 }
 
 #Menu {
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%)
+    --paper-icon-button: {
+        width: 44px;
+        height: 44px;
+        color: var(--primary-background-color);
+    }
 }
 
 #PageFrame {
     border: 0;
     display: inline-block;
-    width: 100%;
     height: 100%;
-}
-
-#Logo {
-    display: flex;
-    align-items: center;
-    margin: 0 0 1em;
-    padding: 2em;
-}
-
-#Logo>img {
-    width: 3em;
-    margin-right: 1em;
-}
-
-#Logo>figcaption {
-    font-size: 1.3em;
-    font-family: Google Sans;
-}
-
-#Dashboard {
-    background: #f1f3f4;
-    padding: 1em;
-    grid-gap: 1em;
-    display: grid;
-    min-height: 0;
-    min-width: 0;
-    --primary-background-color: white;
-}
-
-#Dashboard>paper-card {
-    border-radius: 5px;
-    grid-column: 1 / span 2;
-    max-width: 100%;
-    overflow: hidden;
-    min-width: 0;
-    --paper-card-header: {
-        font-family: "Google Sans"
-    }
-}
-
-#Dashboard>paper-card.thin {
-    grid-column: 3;
-    min-width: 19em
-}
-
-#Dashboard>.Getting-Started paper-icon-item {
-    cursor: pointer;
-}
-
-#Dashboard>.Getting-Started paper-icon-item:not(:last-of-type) {
-    border-bottom: 1px solid var(--border-color);
-}
-
-#Dashboard>.Getting-Started paper-icon-item iron-icon {
-    color: var(--accent-color)
-}
-
-#Dashboard>.Getting-Started paper-icon-item:hover .heading {
-    color: var(--paper-blue-700);
-    text-decoration: underline;
-}
-
-#Dashboard>.Getting-Started [secondary] {
-    word-break: break-word;
     width: 100%;
-    white-space: normal;
-    font-size: .8em;
 }
 
-#Dashboard>.Quick-Links .link {
-    width: 80%;
-    margin: .5em auto;
-    border: 1px solid #eeeeef;
-    padding: .5em 1em;
-    border-radius: 5px;
-    @apply --layout-horizontal;
+#MainDrawer .menu-item iron-icon.external {
+    width: .75em;
+    transform: translateY(-25%);
+    margin-left: .25em;
 }
 
-#Dashboard>.Quick-Links .link.more-coming {
-    opacity: .4;
-    font-style: italic;
-    pointer-events: none
+#MainDrawer .footer .bullet {
+    margin: 0 .5em;
+    display: inline-block;
 }
 
-#Dashboard>.Quick-Links .link .button {
-    color: var(--accent-color);
-    background: rgba(0, 125, 252, 0.25);
-    border-radius: 50%
-}
-
-#Dashboard:after {
-    content: '';
-    grid-column: 1 span 3
-}
-
-#Activity {
-    @apply --layout-vertical;
-    @apply --layout-center-center
-}
-
-#Activity:before, #Activity:after {
-    font-size: 3em;
-    opacity: .3;
-    font-family: Google Sans
-}
-
-#Activity:before {
-    content: ":(";
-    font-size: 6em;
-    transform: rotateZ(90deg)
-}
-
-#Activity:after {
-    content: "No content here yet..."
+#MainDrawer .footer .bullet:before {
+    content: ' ';
+    display: inline-block;
+    height: 0;
+    width: 0;
+    padding: 2px;
+    border-radius: 50%;
+    background: currentColor;
+    transform: translateY(-50%);
 }
 
 [hides] {
@@ -256,15 +272,16 @@ neon-animatable#iframe-page {
 }
 
 [hidden]:not([hides]) {
-    display: none
+    display: none !important
 }
 
 a[href] {
     text-decoration: none;
-    color: initial;
+    color: inherit;
+    outline: none;
 }
 
-a[href]:hover {
+a[href]:hover, iframe-link:hover {
     color: var(--paper-blue-700);
     text-decoration: underline;
 }

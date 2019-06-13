@@ -1,4 +1,4 @@
-FROM nvcr.io/nvidia/rapidsai/rapidsai:cuda9.2_ubuntu16.04
+FROM nvcr.io/nvidia/rapidsai/rapidsai:cuda9.2-runtime-ubuntu16.04
 
 USER root
 
@@ -12,8 +12,6 @@ ENV HOME /home/$NB_USER
 ENV CONDA_DIR=/conda
 ENV PATH $CONDA_DIR/bin:$PATH
 ENV PATH $CONDA_DIR/envs/rapids/bin:$PATH
-# anticipate a default GKE nvidia mount
-ENV PATH /usr/local/nvidia/bin:$PATH
 
 # Use bash instead of sh
 SHELL ["/bin/bash", "-c"]
@@ -32,8 +30,7 @@ ENV LANGUAGE en_US.UTF-8
 # Replace jupyter user with jovyan user UID=1000 and in the 'users' group
 # but allow for non-initial launches of the notebook to have
 # $HOME provided by the contents of a PV
-RUN userdel jupyter && \
-    useradd -M -s /bin/bash -N -u $NB_UID $NB_USER && \
+RUN useradd -M -s /bin/bash -N -u $NB_UID $NB_USER && \
     chown -R ${NB_USER}:users /usr/local/bin && \
     chown -R ${NB_USER}:users $CONDA_DIR && \
     chown -R ${NB_USER}:users /rapids && \
@@ -58,31 +55,8 @@ RUN cd /tmp && \
 
 RUN chown -R ${NB_USER}:users $HOME
 
-ENV GITHUB_REF https://raw.githubusercontent.com/kubeflow/kubeflow/master/components/tensorflow-notebook-image
-
-ADD --chown=jovyan:users $GITHUB_REF/jupyter_notebook_config.py /tmp
-
-# Wipe $HOME for PVC detection later
-WORKDIR $HOME
-RUN rm -fr $(ls -A $HOME)
-
-# Get init scripts from kubeflow
-ADD --chown=jovyan:users \
-    $GITHUB_REF/start-notebook.sh \
-    $GITHUB_REF/start-singleuser.sh \
-    $GITHUB_REF/start.sh \
-    $GITHUB_REF/pvc-check.sh \
-    /usr/local/bin/
-
-RUN chmod a+rx /usr/local/bin/*
-
-# HACK: GKE late-binding of NVIDIA driver mount
-# seems to leave us with a stale cache for the CUDA libs;
-# cudf librmm.so can't find libcuda* from LD_LIBRARY_PATH
-RUN chown -R ${NB_USER}:users /etc
-RUN sed -i '/JUPYTERHUB_API_TOKEN/i\ldconfig' /usr/local/bin/start-notebook.sh
-
 # Configure container startup
 EXPOSE 8888
+USER jovyan
 ENTRYPOINT ["tini", "--"]
-CMD ["start-notebook.sh"]
+CMD ["sh","-c", "jupyter notebook --notebook-dir=/home/jovyan --ip=0.0.0.0 --no-browser --allow-root --port=8888 --NotebookApp.token='' --NotebookApp.password='' --NotebookApp.allow_origin='*' --NotebookApp.base_url=${NB_PREFIX}"]
